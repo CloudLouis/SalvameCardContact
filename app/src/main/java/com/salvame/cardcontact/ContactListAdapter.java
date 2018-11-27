@@ -2,12 +2,16 @@ package com.salvame.cardcontact;
 
 import android.arch.persistence.room.Room;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.salvame.cardcontact.db.Database;
 import com.salvame.cardcontact.db.entity.ContactEntity;
 
 import java.util.ArrayList;
@@ -41,6 +45,44 @@ public class ContactListAdapter extends RecyclerView.Adapter<ContactListAdapter.
         holder.company.setText(contactEntity.getCompany());
         holder.webpage.setText(contactEntity.getWebpage());
         holder.id_view.setText(String.valueOf(contactEntity.getC_id()));
+
+        holder.delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int id = contactEntity.getC_id();
+                Database database = Room.databaseBuilder(context, Database.class, "mainDB").allowMainThreadQueries().build();
+                database.getContactDao().delete(database.getContactDao().getContactEntityById(id));
+                database.close();
+                ((ContactList)context).updateContactList();
+            }
+        });
+
+        holder.phone_number.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String number = contactEntity.getPhone_number();
+                Intent phoneIntent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:"+number));
+                context.startActivity(phoneIntent);
+            }
+        });
+
+        holder.email.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String mail = contactEntity.getEmail();
+                Intent mailIntent = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"+mail));
+                context.startActivity(mailIntent);
+            }
+        });
+
+        holder.webpage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String link = contactEntity.getWebpage();
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(link));
+                context.startActivity(browserIntent);
+            }
+        });
     }
 
     // total number of rows
@@ -63,6 +105,7 @@ public class ContactListAdapter extends RecyclerView.Adapter<ContactListAdapter.
         public TextView company;
         public TextView webpage;
         public TextView id_view;
+        public ImageView delete;
 
         public ViewHolder(View itemView){
             super(itemView);
@@ -74,6 +117,7 @@ public class ContactListAdapter extends RecyclerView.Adapter<ContactListAdapter.
             company = itemView.findViewById(R.id.contact_company);
             webpage = itemView.findViewById(R.id.contact_webpage);
             id_view = itemView.findViewById(R.id.contact_id);
+            delete = itemView.findViewById(R.id.delete);
         }
 
     }

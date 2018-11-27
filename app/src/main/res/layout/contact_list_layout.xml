@@ -9,7 +9,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="5dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
         android:padding="15dp"
         android:elevation="4dp">
 
@@ -35,18 +36,14 @@
                 android:textColor="@android:color/darker_gray"
                 android:textSize="12sp" />
 
-            <ImageView
-                android:id="@+id/imageView"
+            <ImageButton
+                android:id="@+id/delete"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_marginStart="185dp"
-                android:layout_marginLeft="185dp"
-                android:layout_toEndOf="@id/contact_name_title"
-                android:layout_toRightOf="@id/contact_name_title"
-                android:clickable="true"
-                android:onClick="deleteContact"
-                app:srcCompat="@android:drawable/btn_dialog" />
+                android:layout_alignEnd="@+id/contact_name"
+                android:layout_alignRight="@+id/contact_name"
+                android:contentDescription="@string/delete"
+                app:srcCompat="@android:drawable/ic_menu_delete" />
 
             <TextView
                 android:id="@+id/contact_name"
@@ -74,7 +71,9 @@
                 android:layout_below="@id/contact_email_title"
                 android:textAppearance="?android:textAppearanceLarge"
                 android:textIsSelectable="true"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/contact_phone_number_title"
@@ -93,7 +92,9 @@
                 android:layout_below="@id/contact_phone_number_title"
                 android:textAppearance="?android:textAppearanceLarge"
                 android:textIsSelectable="true"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/contact_whatsapp_title"
@@ -168,7 +169,7 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/contact_webpage_title"
                 android:clickable="true"
-                android:onClick="openBrowser"
+                android:focusable="true"
                 android:textAppearance="?android:textAppearanceLarge"
                 android:textSize="16sp" />
 

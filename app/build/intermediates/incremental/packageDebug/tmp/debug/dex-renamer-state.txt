@@ -1,0 +1,4 @@
+#Sun Nov 25 19:25:00 ICT 2018
+base.0=D\:\\Programming\\Side_Tasks\\Salvame-Elisa_Amellia\\CardContact\\app\\build\\intermediates\\transforms\\dexMerger\\debug\\0
+path.0=classes.dex
+renamed.0=classes.dex

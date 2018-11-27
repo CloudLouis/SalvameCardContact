@@ -8,4 +8,7 @@
     <string name="whatsapp">Whatsapp</string>
     <string name="company">Company</string>
     <string name="webpage">Webpage</string>
+    <string name="search">Search</string>
+    <string name="sort">Sort</string>
+    <string name="delete">delete</string>
 </resources>

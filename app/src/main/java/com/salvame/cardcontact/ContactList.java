@@ -1,7 +1,10 @@
 package com.salvame.cardcontact;
 
+import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.arch.persistence.db.SimpleSQLiteQuery;
 import android.arch.persistence.room.Room;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.nfc.NdefMessage;
@@ -12,8 +15,8 @@ import android.nfc.tech.MifareUltralight;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.provider.Settings;
+import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -21,10 +24,13 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.nfc.NfcAdapter;
-import com.salvame.nfcreader.*;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -38,33 +44,35 @@ import com.salvame.nfcreader.parser.NdefMessageParser;
 import com.salvame.nfcreader.record.ParsedNdefRecord;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
+
 public class ContactList extends AppCompatActivity implements View.OnClickListener {
-    private RecyclerView mRecyclerView;
     private ContactListAdapter mAdapter;
-    private RecyclerView.LayoutManager mLayoutManager;
     private IntentIntegrator qrScan;
     private Database database;
     private ArrayList<ContactEntity> dataset;
     private NfcAdapter nfcAdapter;
     private PendingIntent pendingIntent;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        RecyclerView mRecyclerView;
+        List<String> categories;
+        RecyclerView.LayoutManager mLayoutManager;
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contact_list);
 
         database = Room.databaseBuilder(this, Database.class, "mainDB").allowMainThreadQueries().build();
         ContactEntity[] contacts = database.getContactDao().getContactEntity();
+        database.close();
 
         dataset = new ArrayList<>();
-        for(int i = 0;i<contacts.length;i++){
-            dataset.add(contacts[i]);
-        }
+        Collections.addAll(dataset, contacts);
 
-        database.close();
 
         mRecyclerView = findViewById(R.id.contact_recycler);
 
@@ -78,6 +86,54 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        categories = new ArrayList<>();
+        categories.add("name");
+        categories.add("email");
+        categories.add("phone_number");
+        categories.add("whatsapp");
+        categories.add("line");
+        categories.add("company");
+        ArrayAdapter<String> cat_adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
+        cat_adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        final Spinner search_cat = findViewById(R.id.search_category);
+        search_cat.setAdapter(cat_adapter);
+
+        final Spinner sort_cat = findViewById(R.id.sort_option);
+        sort_cat.setAdapter(cat_adapter);
+
+        ImageButton search_button = findViewById(R.id.search_button);
+        search_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                EditText query_field = findViewById(R.id.search_field);
+                String query = query_field.getText().toString();
+                query = "%"+query+"%";
+                String category = search_cat.getSelectedItem().toString();
+                searchContact(category, query);
+            }
+        });
+
+        ImageButton sort_button  = findViewById(R.id.sort_button);
+        sort_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String cat = sort_cat.getSelectedItem().toString();
+                String direction = "ASC";
+                sortContact(cat, direction);
+            }
+        });
+
+        ImageButton sort_button2  = findViewById(R.id.sort_button2);
+        sort_button2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String cat = sort_cat.getSelectedItem().toString();
+                String direction = "DESC";
+                sortContact(cat, direction);
+            }
+        });
 
         qrScan = new IntentIntegrator(this);
 
@@ -128,9 +184,6 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
                     JSONObject obj = new JSONObject(result.getContents());
 
                     addContact(obj);
-
-                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(obj.getString("web_link")));
-                    startActivity(browserIntent);
                 } catch (JSONException e) {
                     e.printStackTrace();
                     //if control comes here
@@ -143,22 +196,6 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
-    }
-
-    public void openBrowser(View v){
-        TextView link_view = findViewById(R.id.contact_webpage);
-        String link = link_view.getText().toString();
-        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(link));
-        startActivity(browserIntent);
-    }
-
-    public void deleteContact(View v){
-        TextView id_view = findViewById(R.id.contact_id);
-        int id = Integer.parseInt(id_view.getText().toString());
-        database = Room.databaseBuilder(this, Database.class, "mainDB").allowMainThreadQueries().build();
-        database.getContactDao().delete(database.getContactDao().getContactEntityById(id));
-        database.close();
-        updateContactList();
     }
 
     public void addContact(JSONObject obj) throws JSONException {
@@ -178,6 +215,9 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
 
         database.close();
 
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(obj.getString("web_link")));
+        startActivity(browserIntent);
+
     }
 
     public void updateContactList(){
@@ -185,9 +225,31 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
         ContactEntity[] contacts = database.getContactDao().getContactEntity();
 
         dataset.clear();
-        for (int i = 0; i < contacts.length; i++) {
-            dataset.add(contacts[i]);
-        }
+        Collections.addAll(dataset, contacts);
+        mAdapter.updateItems(dataset);
+        database.close();
+    }
+
+    public void searchContact(String cat, String query){
+        String queryString = "SELECT * FROM contacts WHERE "+cat+" LIKE '"+query+"';";
+        SimpleSQLiteQuery sqLiteQuery = new SimpleSQLiteQuery(queryString);
+        database = Room.databaseBuilder(this, Database.class, "mainDB").allowMainThreadQueries().build();
+        ContactEntity[] contacts = database.getContactDao().queryDatabase(sqLiteQuery);
+
+        dataset.clear();
+        Collections.addAll(dataset, contacts);
+        mAdapter.updateItems(dataset);
+        database.close();
+    }
+
+    public void sortContact(String cat, String direction){
+        String queryString = "SELECT * FROM contacts ORDER BY "+cat+" "+direction+";";
+        SimpleSQLiteQuery sqLiteQuery = new SimpleSQLiteQuery(queryString);
+        database = Room.databaseBuilder(this, Database.class, "mainDB").allowMainThreadQueries().build();
+        ContactEntity[] contacts = database.getContactDao().queryDatabase(sqLiteQuery);
+
+        dataset.clear();
+        Collections.addAll(dataset, contacts);
         mAdapter.updateItems(dataset);
         database.close();
     }
@@ -213,8 +275,18 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_search) {
+            ConstraintLayout search_container = findViewById(R.id.search_container);
+            search_container.setVisibility(View.VISIBLE);
+            ConstraintLayout sort_container = findViewById(R.id.sort_container);
+            sort_container.setVisibility(View.GONE);
+        }
+        if (id == R.id.action_sort) {
+            updateContactList();
+            ConstraintLayout search_container = findViewById(R.id.search_container);
+            search_container.setVisibility(View.GONE);
+            ConstraintLayout sort_container = findViewById(R.id.sort_container);
+            sort_container.setVisibility(View.VISIBLE);
         }
 
         return super.onOptionsItemSelected(item);
@@ -224,10 +296,14 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
     @Override
     protected void onNewIntent(Intent intent) {
         setIntent(intent);
-        resolveIntent(intent);
+        try {
+            resolveIntent(intent);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void resolveIntent(Intent intent) {
+    private void resolveIntent(Intent intent) throws JSONException {
         String action = intent.getAction();
 
         if (NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)
@@ -246,18 +322,18 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
             } else {
                 byte[] empty = new byte[0];
                 byte[] id = intent.getByteArrayExtra(NfcAdapter.EXTRA_ID);
-                Tag tag = (Tag) intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+                Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
                 byte[] payload = dumpTagData(tag).getBytes();
                 NdefRecord record = new NdefRecord(NdefRecord.TNF_UNKNOWN, empty, id, payload);
                 NdefMessage msg = new NdefMessage(new NdefRecord[] {record});
                 msgs = new NdefMessage[] {msg};
             }
 
-            displayMsgs(msgs);
+            getMsg(msgs);
         }
     }
 
-    private void displayMsgs(NdefMessage[] msgs) {
+    private void getMsg(NdefMessage[] msgs) throws JSONException {
         if (msgs == null || msgs.length == 0)
             return;
 
@@ -271,8 +347,31 @@ public class ContactList extends AppCompatActivity implements View.OnClickListen
             builder.append(str);
         }
 
-        Toast.makeText(this, builder.toString(), Toast.LENGTH_SHORT).show();
+        final JSONObject obj = new JSONObject(builder.toString());
+        AlertDialog.Builder Abuilder = new AlertDialog.Builder(this);
+        Abuilder.setCancelable(true);
+        Abuilder.setTitle("NFC Reader");
+        Abuilder.setMessage("Confirm adding this contact?\n"+obj);
+        Abuilder.setPositiveButton("Confirm",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        try {
+                            addContact(obj);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+        Abuilder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Toast.makeText(ContactList.this, "Canceled", Toast.LENGTH_SHORT).show();
+            }
+        });
 
+        AlertDialog dialog = Abuilder.create();
+        dialog.show();
     }
 
     private String dumpTagData(Tag tag) {
